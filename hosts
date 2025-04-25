@@ -1,0 +1,2 @@
+[server]
+DynamicWeb ansible_host=10.200.3.95

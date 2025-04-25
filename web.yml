@@ -1,0 +1,71 @@
+---
+- name: DynamicWeb
+  hosts: DynamicWeb 
+  become: yes 
+  gather_facts: true
+
+  tasks: 
+  - name: Install docker packages 
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      state: present
+      update_cache: yes
+    with_items:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+    tags:
+      - docker
+
+  - name: Add Docker s official GPG key
+    ansible.builtin.apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+    tags:
+      - docker
+
+  - name: install gpg
+    ansible.builtin.get_url:
+      url:  https://download.docker.com/linux/debian/gpg
+      dest: /etc/apt/keyrings/docker.asc
+      mode: '0644'
+
+  - name: Set up the stable repository 
+    ansible.builtin.apt_repository:
+      repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ ansible_os_family | lower }}  {{ ansible_lsb.codename }} stable
+      state: present
+      update_cache: yes
+    tags:
+      - docker
+  
+  - name: Update apt packages
+    ansible.builtin.apt:
+      update_cache: yes
+    tags:
+      - docker
+
+  - name: Install docker 
+    become: yes    
+    ansible.builtin.apt:
+      name: '{{ item }}'
+      state: present
+      update_cache: yes
+    with_items:
+      - docker-ce
+      - docker-compose-plugin
+      - docker-ce-cli
+      - containerd.io 
+      - docker-buildx-plugin
+    tags:
+      - docker
+
+  - name: Copy project # Копируем проект с хост машины в созданную через vagrant
+    copy: 
+      src: project 
+      dest: /root
+
+  - name: Run container
+    shell:
+      cmd: "docker compose -f docker-compose.yml up -d"
+      chdir: /root/project
